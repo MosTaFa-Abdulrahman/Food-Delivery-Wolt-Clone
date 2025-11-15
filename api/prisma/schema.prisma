@@ -1,0 +1,230 @@
+// bunx dotenv -e .env -- prisma db push
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERING
+  DELIVERED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  RESTAURANT_OWNER
+
+  @@map("user_role")
+}
+
+// ✅
+model User {
+  id               String    @id @default(uuid())
+  username         String    @unique
+  email            String    @unique
+  password         String
+  firstName        String?   @map("first_name")
+  lastName         String?   @map("last_name")
+  imgUrl           String?   @map("img_url")
+  city             String?
+  phoneNumber      String?   @map("phone_number")
+  role             UserRole  @default(USER)
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  orders                Order[]
+  restaurantFavourites  RestaurantFavourite[]
+  productFavourites     ProductFavourite[]
+  locations             Location[]
+
+  @@map("users")
+}
+
+// ✅
+model RestaurantCategory {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  imgUrl           String?   @map("img_url")
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  restaurants Restaurant[]
+
+  @@map("restaurant_categories")
+}
+
+// ✅
+model ProductCategory {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  imgUrl           String?   @map("img_url")
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId     String    @map("restaurant_id")
+  products   Product[]
+
+  @@map("product_categories")
+}
+
+// ✅
+model Restaurant {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  imgUrl           String?   @map("img_url")
+  address          String
+  city             String
+  phoneNumber      String?   @map("phone_number")
+  rating           Float?    @default(0)
+  deliveryTime     String?   @map("delivery_time")
+  deliveryFee      Float?    @map("delivery_fee")
+  minOrder         Float?    @map("min_order")
+  isActive         Boolean   @default(true) @map("is_active")
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  category             RestaurantCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId       String    @map("category_id")
+  productCategories    ProductCategory[]
+  products             Product[]
+  orders               Order[]
+  restaurantFavourites RestaurantFavourite[]
+
+  @@map("restaurants")
+}
+
+// ✅
+model Product {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  quantity      Float
+  price            Float
+  imgUrl           String?   @map("img_url")
+  isAvailable      Boolean   @default(true) @map("is_available")
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  restaurant        Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId     String    @map("restaurant_id")
+  category          ProductCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId       String    @map("category_id")
+  productFavourites ProductFavourite[]
+
+  @@map("products")
+}
+
+// ✅
+model Order {
+  id               String      @id @default(uuid())
+  orderNumber      String      @unique @map("order_number")
+  totalAmount      Float       @map("total_amount")
+  deliveryFee      Float       @map("delivery_fee")
+  status           OrderStatus @default(PENDING)
+  deliveryAddress  String      @map("delivery_address")
+  phoneNumber      String      @map("phone_number")
+  notes            String?
+  createdDate      DateTime    @default(now()) @map("created_date")
+  lastModifiedDate DateTime?   @updatedAt @map("last_modified_date")
+
+  // Relationships
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String      @map("user_id")
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId     String      @map("restaurant_id")
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+// ✅
+model OrderItem {
+  id               String    @id @default(uuid())
+  productId        String?   @map("product_id") // Nullable in case product is deleted
+  productName      String    @map("product_name") // Store product name
+  productPrice     Float     @map("product_price") // Store product price at time of order
+  productQyantity     Float     @map("product_quantity") // Store product quantity at time of order
+  productImgUrl    String?   @map("product_img_url") // Store product image
+  quantity         Int
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String    @map("order_id")
+
+  @@map("order_items")
+}
+
+// ✅
+model Location {
+  id               String    @id @default(uuid())
+  label            String // e.g., "Home", "Work", "Other"
+  address          String
+  city             String
+  latitude         String?
+  longitude        String?
+  isDefault        Boolean   @default(false) @map("is_default")
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String    @map("user_id")
+
+  @@map("locations")
+}
+
+// ✅
+model RestaurantFavourite {
+  id               String    @id @default(uuid())
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String    @map("user_id")
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId     String    @map("restaurant_id")
+
+  @@unique([userId, restaurantId])
+  @@map("restaurant_favourites")
+}
+
+// ✅
+model ProductFavourite {
+  id               String    @id @default(uuid())
+  createdDate      DateTime  @default(now()) @map("created_date")
+  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
+
+  // Relationships
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String    @map("user_id")
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId        String    @map("product_id")
+
+  @@unique([userId, productId])
+  @@map("product_favourites")
+}
