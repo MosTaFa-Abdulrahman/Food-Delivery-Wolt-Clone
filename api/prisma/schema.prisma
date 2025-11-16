@@ -54,20 +54,7 @@ model User {
   @@map("users")
 }
 
-// ✅
-model RestaurantCategory {
-  id               String    @id @default(uuid())
-  name             String
-  description      String?
-  imgUrl           String?   @map("img_url")
-  createdDate      DateTime  @default(now()) @map("created_date")
-  lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
 
-  // Relationships
-  restaurants Restaurant[]
-
-  @@map("restaurant_categories")
-}
 
 // ✅
 model ProductCategory {
@@ -104,8 +91,6 @@ model Restaurant {
   lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
 
   // Relationships
-  category             RestaurantCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  categoryId       String    @map("category_id")
   productCategories    ProductCategory[]
   products             Product[]
   orders               Order[]

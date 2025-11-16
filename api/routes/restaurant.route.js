@@ -1,35 +1,43 @@
 const router = require("express").Router();
-const { authenticate, authorize } = require("../middlewares/auth.middleware");
+const {
+  authenticate,
+  authorize,
+  optionalAuthenticate,
+} = require("../middlewares/auth.middleware");
 const restaurantController = require("../controllers/restaurant.controller");
 
 // Public routes
 router.get("/", restaurantController.getAll);
-router.get("/:id", restaurantController.getById);
-router.get("/category/:categoryId", restaurantController.getByCategory);
-router.post("/toggle", authenticate, restaurantController.toggleFavourite);
+
+// ⚠️ IMPORTANT: Put specific routes BEFORE parameterized routes
 router.get(
   "/my-favourites",
   authenticate,
   restaurantController.getMyFavourites
 );
 
-// Admin only routes
+router.post("/toggle", authenticate, restaurantController.toggleFavourite);
+
+// This should come AFTER /my-favourites
+router.get("/:id", optionalAuthenticate, restaurantController.getById);
+
+// ADMIN && RESTAURANT_OWNER routes
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   restaurantController.create
 );
 router.put(
   "/:id",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   restaurantController.update
 );
 router.delete(
   "/:id",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   restaurantController.delete
 );
 

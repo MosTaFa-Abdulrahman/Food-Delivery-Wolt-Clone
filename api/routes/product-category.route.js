@@ -10,23 +10,23 @@ router.get(
   productCategoryController.getByRestaurant
 );
 
-// Admin only routes
+// ADMIN && RESTAURANT_OWNER routes
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   productCategoryController.create
 );
 router.put(
   "/:id",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   productCategoryController.update
 );
 router.delete(
   "/:id",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   productCategoryController.delete
 );
 

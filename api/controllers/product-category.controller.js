@@ -1,15 +1,31 @@
 const prisma = require("../config/db");
 
 const productCategoryController = {
-  // Get all with pagination
+  // Get all with pagination and search
   getAll: async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
+      const search = req.query.search || "";
+      const restaurantId = req.query.restaurantId || "";
+
+      // Build where clause
+      const where = {};
+
+      // Search by name only
+      if (search) {
+        where.name = { contains: search, mode: "insensitive" };
+      }
+
+      // Filter by restaurant
+      if (restaurantId) {
+        where.restaurantId = restaurantId;
+      }
 
       const [categories, total] = await Promise.all([
         prisma.productCategory.findMany({
+          where,
           skip,
           take: limit,
           orderBy: { createdDate: "desc" },
@@ -18,6 +34,7 @@ const productCategoryController = {
               select: {
                 id: true,
                 name: true,
+                imgUrl: true,
               },
             },
             _count: {
@@ -25,7 +42,7 @@ const productCategoryController = {
             },
           },
         }),
-        prisma.productCategory.count(),
+        prisma.productCategory.count({ where }),
       ]);
 
       res.status(200).json({
@@ -35,6 +52,10 @@ const productCategoryController = {
           limit,
           total,
           totalPages: Math.ceil(total / limit),
+        },
+        filters: {
+          search: search || null,
+          restaurantId: restaurantId || null,
         },
       });
     } catch (error) {
@@ -116,7 +137,7 @@ const productCategoryController = {
     }
   },
 
-  // Create (ADMIN only)
+  // Create (ADMIN && RESTAURANT_OWNER)
   create: async (req, res) => {
     try {
       const { name, description, imgUrl, restaurantId } = req.body;
@@ -159,7 +180,7 @@ const productCategoryController = {
     }
   },
 
-  // Update (ADMIN only)
+  // Update (ADMIN && RESTAURANT_OWNER)
   update: async (req, res) => {
     try {
       const { id } = req.params;
@@ -203,7 +224,7 @@ const productCategoryController = {
     }
   },
 
-  // Delete (ADMIN only)
+  // Delete (ADMIN && RESTAURANT_OWNER)
   delete: async (req, res) => {
     try {
       const { id } = req.params;

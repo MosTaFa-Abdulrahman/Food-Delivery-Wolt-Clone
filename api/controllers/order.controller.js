@@ -221,7 +221,7 @@ const orderController = {
         prisma.order.count({ where }),
       ]);
 
-      res.json({
+      res.status(200).json({
         data: orders,
         pagination: {
           page,
@@ -270,7 +270,7 @@ const orderController = {
         prisma.order.count({ where }),
       ]);
 
-      res.json({
+      res.status(200).json({
         data: orders,
         pagination: {
           page,
@@ -324,7 +324,7 @@ const orderController = {
         return res.status(403).json({ error: "Access denied" });
       }
 
-      res.json(order);
+      res.status(200).json(order);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -373,7 +373,7 @@ const orderController = {
         },
       });
 
-      res.json({
+      res.status(200).json({
         message: "Order status updated successfully",
         data: order,
       });

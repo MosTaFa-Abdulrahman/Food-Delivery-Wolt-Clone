@@ -1,4 +1,4 @@
-// Style Laoding User
+// Style Loading User
 import * as U from "./auth.context.style";
 import { Loader } from "lucide-react";
 
@@ -21,8 +21,8 @@ export const AuthContextProvider = ({ children }) => {
       // Get fresh user data from database
       const response = await makeRequest.get("/auth/profile");
 
-      if (response.data.status === "success") {
-        setCurrentUser(response.data.data);
+      if (response.data && response.data.user) {
+        setCurrentUser(response.data.user);
       } else {
         throw new Error("Failed to get user data");
       }
@@ -57,11 +57,11 @@ export const AuthContextProvider = ({ children }) => {
           // Always get fresh user data from database
           const response = await makeRequest.get("/auth/profile");
 
-          if (response.data.status === "success") {
+          if (response.data && response.data.user) {
             // Set user data from database response
-            setCurrentUser(response.data.data);
+            setCurrentUser(response.data.user);
           } else {
-            console.error("Auth check failed:", response.data.errors);
+            console.error("Auth check failed: No user data");
             localStorage.removeItem("token");
             setCurrentUser(null);
           }
@@ -91,9 +91,9 @@ export const AuthContextProvider = ({ children }) => {
       try {
         const response = await makeRequest.get("/auth/profile");
 
-        if (response.data.status === "success") {
-          setCurrentUser(response.data.data);
-          return response.data.data;
+        if (response.data && response.data.user) {
+          setCurrentUser(response.data.user);
+          return response.data.user;
         }
       } catch (error) {
         console.error("Refresh user failed:", error);

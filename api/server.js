@@ -12,7 +12,6 @@ const prisma = require("./config/db");
 // Routes
 const authRoute = require("./routes/auth.route");
 const usersRoute = require("./routes/user.route");
-const restaurantCategoriesRoute = require("./routes/restaurant-category.route");
 const restaurantsRoute = require("./routes/restaurant.route");
 const productCategoriesRoute = require("./routes/product-category.route");
 const productsRoute = require("./routes/product.route");
@@ -25,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 const corsOptions = {
-  origin: ["http://localhost:8081"],
+  origin: ["http://localhost:8081", "http://localhost:5173"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   exposedHeaders: ["Set-Cookie"],
@@ -50,15 +49,9 @@ app.get("/", async (req, res) => {
 // MiddleWares
 app.use("/api/auth", authRoute);
 app.use("/api/users", usersRoute);
-app.use("/api/restaurant-categories", restaurantCategoriesRoute);
 app.use("/api/restaurants", restaurantsRoute);
 app.use("/api/product-categories", productCategoriesRoute);
 app.use("/api/products", productsRoute);
 app.use("/api/orders", ordersRoute);
 
 app.listen(PORT, () => console.log(`Server Running on PORT ${PORT} 🥰`));
-
-// RestaurantCategory (Fast Food, Italian, etc.)
-//     └── Restaurant (McDonald's, Pizza Hut, etc.)
-//             └── ProductCategory (Burgers, Drinks, Desserts)
-//                     └── Product (Big Mac, Coke, Ice Cream)

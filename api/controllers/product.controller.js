@@ -1,3 +1,4 @@
+// product.controller.js - FULL FILE WITH FAVOURITES
 const prisma = require("../config/db");
 
 const productController = {
@@ -11,11 +12,11 @@ const productController = {
       const restaurantId = req.query.restaurantId || "";
       const categoryId = req.query.categoryId || "";
       const isAvailable = req.query.isAvailable;
+      const userId = req.user?.id; // Optional auth
 
       // Build where clause
       const where = {};
 
-      // Search by name or description
       if (search) {
         where.OR = [
           { name: { contains: search, mode: "insensitive" } },
@@ -23,20 +24,9 @@ const productController = {
         ];
       }
 
-      // Filter by restaurant
-      if (restaurantId) {
-        where.restaurantId = restaurantId;
-      }
-
-      // Filter by category
-      if (categoryId) {
-        where.categoryId = categoryId;
-      }
-
-      // Filter by availability
-      if (isAvailable !== undefined) {
-        where.isAvailable = isAvailable === "true";
-      }
+      if (restaurantId) where.restaurantId = restaurantId;
+      if (categoryId) where.categoryId = categoryId;
+      if (isAvailable !== undefined) where.isAvailable = isAvailable === "true";
 
       const [products, total] = await Promise.all([
         prisma.product.findMany({
@@ -61,17 +51,36 @@ const productController = {
             },
             _count: {
               select: {
-                cartItems: true,
                 productFavourites: true,
               },
             },
+            // Check if current user liked this product
+            ...(userId && {
+              productFavourites: {
+                where: {
+                  userId: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+            }),
           },
         }),
         prisma.product.count({ where }),
       ]);
 
+      // Transform data to add isLiked field
+      const productsWithLikes = products.map((product) => {
+        const { productFavourites, ...productData } = product;
+        return {
+          ...productData,
+          isLiked: userId ? productFavourites?.length > 0 : false,
+        };
+      });
+
       res.status(200).json({
-        data: products,
+        data: productsWithLikes,
         pagination: {
           page,
           limit,
@@ -94,6 +103,7 @@ const productController = {
   getById: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.id; // Optional auth
 
       const product = await prisma.product.findUnique({
         where: { id },
@@ -119,10 +129,20 @@ const productController = {
           },
           _count: {
             select: {
-              cartItems: true,
               productFavourites: true,
             },
           },
+          // Check if current user liked this product
+          ...(userId && {
+            productFavourites: {
+              where: {
+                userId: userId,
+              },
+              select: {
+                id: true,
+              },
+            },
+          }),
         },
       });
 
@@ -130,7 +150,14 @@ const productController = {
         return res.status(404).json({ error: "Product not found" });
       }
 
-      res.json(product);
+      // Add isLiked field
+      const { productFavourites, ...productData } = product;
+      const isLiked = userId && productFavourites?.length > 0;
+
+      res.json({
+        ...productData,
+        isLiked: isLiked,
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -146,11 +173,10 @@ const productController = {
       const search = req.query.search || "";
       const categoryId = req.query.categoryId || "";
       const isAvailable = req.query.isAvailable;
+      const userId = req.user?.id; // Optional auth
 
-      // Build where clause
       const where = { restaurantId };
 
-      // Add search
       if (search) {
         where.OR = [
           { name: { contains: search, mode: "insensitive" } },
@@ -158,15 +184,8 @@ const productController = {
         ];
       }
 
-      // Filter by category
-      if (categoryId) {
-        where.categoryId = categoryId;
-      }
-
-      // Filter by availability
-      if (isAvailable !== undefined) {
-        where.isAvailable = isAvailable === "true";
-      }
+      if (categoryId) where.categoryId = categoryId;
+      if (isAvailable !== undefined) where.isAvailable = isAvailable === "true";
 
       const [products, total] = await Promise.all([
         prisma.product.findMany({
@@ -175,26 +194,38 @@ const productController = {
           take: limit,
           orderBy: { createdDate: "desc" },
           include: {
-            category: {
-              select: {
-                id: true,
-                name: true,
-                imgUrl: true,
-              },
-            },
             _count: {
               select: {
-                cartItems: true,
                 productFavourites: true,
               },
             },
+            // Check if current user liked this product
+            ...(userId && {
+              productFavourites: {
+                where: {
+                  userId: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+            }),
           },
         }),
         prisma.product.count({ where }),
       ]);
 
+      // Transform data to add isLiked field
+      const productsWithLikes = products.map((product) => {
+        const { productFavourites, ...productData } = product;
+        return {
+          ...productData,
+          isLiked: userId ? productFavourites?.length > 0 : false,
+        };
+      });
+
       res.status(200).json({
-        data: products,
+        data: productsWithLikes,
         pagination: {
           page,
           limit,
@@ -222,11 +253,10 @@ const productController = {
       const skip = (page - 1) * limit;
       const search = req.query.search || "";
       const isAvailable = req.query.isAvailable;
+      const userId = req.user?.id; // Optional auth
 
-      // Build where clause
       const where = { categoryId };
 
-      // Add search
       if (search) {
         where.OR = [
           { name: { contains: search, mode: "insensitive" } },
@@ -234,10 +264,7 @@ const productController = {
         ];
       }
 
-      // Filter by availability
-      if (isAvailable !== undefined) {
-        where.isAvailable = isAvailable === "true";
-      }
+      if (isAvailable !== undefined) where.isAvailable = isAvailable === "true";
 
       const [products, total] = await Promise.all([
         prisma.product.findMany({
@@ -262,17 +289,36 @@ const productController = {
             },
             _count: {
               select: {
-                cartItems: true,
                 productFavourites: true,
               },
             },
+            // Check if current user liked this product
+            ...(userId && {
+              productFavourites: {
+                where: {
+                  userId: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+            }),
           },
         }),
         prisma.product.count({ where }),
       ]);
 
+      // Transform data to add isLiked field
+      const productsWithLikes = products.map((product) => {
+        const { productFavourites, ...productData } = product;
+        return {
+          ...productData,
+          isLiked: userId ? productFavourites?.length > 0 : false,
+        };
+      });
+
       res.status(200).json({
-        data: products,
+        data: productsWithLikes,
         pagination: {
           page,
           limit,
@@ -290,7 +336,7 @@ const productController = {
     }
   },
 
-  // Create (ADMIN only)
+  // Create Product
   create: async (req, res) => {
     try {
       const {
@@ -302,30 +348,39 @@ const productController = {
         isAvailable,
         restaurantId,
         categoryId,
+        category,
       } = req.body;
 
-      // Validate required fields
-      if (
-        !name ||
-        quantity === undefined ||
-        !price ||
-        !restaurantId ||
-        !categoryId
-      ) {
+      if (!name || quantity === undefined || !price || !restaurantId) {
         return res.status(400).json({
-          error:
-            "Name, quantity, price, restaurantId, and categoryId are required",
+          error: "Name, quantity, price, and restaurantId are required",
         });
       }
 
-      // Validate numeric fields
+      if (!categoryId && !category) {
+        return res.status(400).json({
+          error: "Either categoryId or category object is required",
+        });
+      }
+
+      if (categoryId && category) {
+        return res.status(400).json({
+          error: "Provide either categoryId or category object, not both",
+        });
+      }
+
       if (quantity < 0 || price < 0) {
         return res.status(400).json({
           error: "Quantity and price must be positive numbers",
         });
       }
 
-      // Check if restaurant exists
+      if (category && !category.name) {
+        return res.status(400).json({
+          error: "Category name is required when creating a new category",
+        });
+      }
+
       const restaurant = await prisma.restaurant.findUnique({
         where: { id: restaurantId },
       });
@@ -334,57 +389,102 @@ const productController = {
         return res.status(404).json({ error: "Restaurant not found" });
       }
 
-      // Check if category exists and belongs to the restaurant
-      const category = await prisma.productCategory.findUnique({
-        where: { id: categoryId },
-      });
+      let finalCategoryId = categoryId;
 
-      if (!category) {
-        return res.status(404).json({ error: "Product category not found" });
+      if (categoryId) {
+        const existingCategory = await prisma.productCategory.findUnique({
+          where: { id: categoryId },
+        });
+
+        if (!existingCategory) {
+          return res.status(404).json({ error: "Product category not found" });
+        }
+
+        if (existingCategory.restaurantId !== restaurantId) {
+          return res.status(400).json({
+            error: "Category does not belong to the specified restaurant",
+          });
+        }
       }
 
-      if (category.restaurantId !== restaurantId) {
-        return res.status(400).json({
-          error: "Category does not belong to the specified restaurant",
+      const result = await prisma.$transaction(async (tx) => {
+        let createdCategory = null;
+
+        if (category) {
+          createdCategory = await tx.productCategory.create({
+            data: {
+              name: category.name,
+              description: category.description || null,
+              imgUrl: category.imgUrl || null,
+              restaurantId,
+            },
+          });
+
+          finalCategoryId = createdCategory.id;
+        }
+
+        const product = await tx.product.create({
+          data: {
+            name,
+            description,
+            quantity,
+            price,
+            imgUrl,
+            isAvailable: isAvailable !== undefined ? isAvailable : true,
+            restaurantId,
+            categoryId: finalCategoryId,
+          },
+          include: {
+            restaurant: {
+              select: {
+                id: true,
+                name: true,
+                imgUrl: true,
+              },
+            },
+            category: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                imgUrl: true,
+              },
+            },
+            _count: {
+              select: {
+                productFavourites: true,
+              },
+            },
+          },
+        });
+
+        return {
+          product,
+          categoryCreated: !!createdCategory,
+          category: createdCategory,
+        };
+      });
+
+      res.status(201).json({
+        message: result.categoryCreated
+          ? "Product and category created successfully"
+          : "Product created successfully",
+        data: result.product,
+        ...(result.categoryCreated && {
+          newCategory: result.category,
+        }),
+      });
+    } catch (error) {
+      if (error.code === "P2002") {
+        return res.status(409).json({
+          error: "A category with this name already exists for this restaurant",
         });
       }
-
-      const product = await prisma.product.create({
-        data: {
-          name,
-          description,
-          quantity,
-          price,
-          imgUrl,
-          isAvailable: isAvailable !== undefined ? isAvailable : true,
-          restaurantId,
-          categoryId,
-        },
-        include: {
-          restaurant: {
-            select: {
-              id: true,
-              name: true,
-              imgUrl: true,
-            },
-          },
-          category: {
-            select: {
-              id: true,
-              name: true,
-              imgUrl: true,
-            },
-          },
-        },
-      });
-
-      res.status(201).json(product);
-    } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
-  // Update (ADMIN only)
+  // Update
   update: async (req, res) => {
     try {
       const { id } = req.params;
@@ -399,7 +499,17 @@ const productController = {
         categoryId,
       } = req.body;
 
-      // Validate numeric fields if provided
+      const existingProduct = await prisma.product.findUnique({
+        where: { id },
+        include: {
+          category: true,
+        },
+      });
+
+      if (!existingProduct) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
       if (
         (quantity !== undefined && quantity < 0) ||
         (price !== undefined && price < 0)
@@ -409,8 +519,7 @@ const productController = {
         });
       }
 
-      // If restaurantId is being updated, check if it exists
-      if (restaurantId) {
+      if (restaurantId && restaurantId !== existingProduct.restaurantId) {
         const restaurant = await prisma.restaurant.findUnique({
           where: { id: restaurantId },
         });
@@ -418,9 +527,17 @@ const productController = {
         if (!restaurant) {
           return res.status(404).json({ error: "Restaurant not found" });
         }
+
+        if (!categoryId) {
+          return res.status(400).json({
+            error:
+              "When changing restaurant, you must also select a new category",
+          });
+        }
       }
 
-      // If categoryId is being updated, check if it exists
+      const targetRestaurantId = restaurantId || existingProduct.restaurantId;
+
       if (categoryId) {
         const category = await prisma.productCategory.findUnique({
           where: { id: categoryId },
@@ -430,26 +547,26 @@ const productController = {
           return res.status(404).json({ error: "Product category not found" });
         }
 
-        // If both restaurantId and categoryId are provided, verify they match
-        if (restaurantId && category.restaurantId !== restaurantId) {
+        if (category.restaurantId !== targetRestaurantId) {
           return res.status(400).json({
             error: "Category does not belong to the specified restaurant",
           });
         }
       }
 
+      const updateData = {};
+      if (name !== undefined) updateData.name = name;
+      if (description !== undefined) updateData.description = description;
+      if (quantity !== undefined) updateData.quantity = quantity;
+      if (price !== undefined) updateData.price = price;
+      if (imgUrl !== undefined) updateData.imgUrl = imgUrl;
+      if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
+      if (restaurantId !== undefined) updateData.restaurantId = restaurantId;
+      if (categoryId !== undefined) updateData.categoryId = categoryId;
+
       const product = await prisma.product.update({
         where: { id },
-        data: {
-          name,
-          description,
-          quantity,
-          price,
-          imgUrl,
-          isAvailable,
-          restaurantId,
-          categoryId,
-        },
+        data: updateData,
         include: {
           restaurant: {
             select: {
@@ -462,22 +579,38 @@ const productController = {
             select: {
               id: true,
               name: true,
+              description: true,
               imgUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              productFavourites: true,
             },
           },
         },
       });
 
-      res.status(200).json(product);
+      res.status(200).json({
+        message: "Product updated successfully",
+        data: product,
+      });
     } catch (error) {
       if (error.code === "P2025") {
         return res.status(404).json({ error: "Product not found" });
       }
+
+      if (error.code === "P2002") {
+        return res.status(409).json({
+          error: "A product with this name already exists",
+        });
+      }
+
       res.status(500).json({ error: error.message });
     }
   },
 
-  // Delete (ADMIN only)
+  // Delete
   delete: async (req, res) => {
     try {
       const { id } = req.params;
@@ -495,17 +628,18 @@ const productController = {
     }
   },
 
-  // Toggle favourite (add or remove)
+  // Toggle favourite
   toggleFavourite: async (req, res) => {
     try {
       const userId = req.user.id;
       const { productId } = req.body;
 
+      console.log("🔄 Toggle Product Favourite:", { userId, productId });
+
       if (!productId) {
         return res.status(400).json({ error: "productId is required" });
       }
 
-      // Check if product exists
       const product = await prisma.product.findUnique({
         where: { id: productId },
       });
@@ -514,7 +648,6 @@ const productController = {
         return res.status(404).json({ error: "Product not found" });
       }
 
-      // Check if already favourited
       const existingFavourite = await prisma.productFavourite.findUnique({
         where: {
           userId_productId: {
@@ -525,59 +658,35 @@ const productController = {
       });
 
       if (existingFavourite) {
-        // Remove from favourites
         await prisma.productFavourite.delete({
           where: {
             id: existingFavourite.id,
           },
         });
 
+        console.log("❌ Removed from favourites");
+
         return res.status(200).json({
           message: "Product removed from favourites",
-          isFavourite: false,
+          isLiked: false,
         });
       } else {
-        // Add to favourites
-        const favourite = await prisma.productFavourite.create({
+        await prisma.productFavourite.create({
           data: {
             userId,
             productId,
           },
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                price: true,
-                imgUrl: true,
-                quantity: true,
-                isAvailable: true,
-                restaurant: {
-                  select: {
-                    id: true,
-                    name: true,
-                    imgUrl: true,
-                  },
-                },
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
         });
+
+        console.log("✅ Added to favourites");
 
         return res.status(201).json({
           message: "Product added to favourites",
-          isFavourite: true,
-          data: favourite,
+          isLiked: true,
         });
       }
     } catch (error) {
+      console.error("❌ Toggle Favourite Error:", error);
       res.status(500).json({ error: error.message });
     }
   },
@@ -621,8 +730,14 @@ const productController = {
         prisma.productFavourite.count({ where: { userId } }),
       ]);
 
+      // All products in favourites are liked by definition
+      const data = favourites.map((fav) => ({
+        ...fav.product,
+        isLiked: true,
+      }));
+
       res.status(200).json({
-        data: favourites,
+        data,
         pagination: {
           page,
           limit,

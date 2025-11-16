@@ -8,7 +8,7 @@ const restaurantController = {
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
       const search = req.query.search || "";
-      const categoryId = req.query.categoryId || "";
+      const userId = req.user?.id; // Current logged-in user (optional)
 
       // Build where clause for search and filter
       const where = {};
@@ -22,11 +22,6 @@ const restaurantController = {
         ];
       }
 
-      // Filter by category
-      if (categoryId) {
-        where.categoryId = categoryId;
-      }
-
       const [restaurants, total] = await Promise.all([
         prisma.restaurant.findMany({
           where,
@@ -34,13 +29,6 @@ const restaurantController = {
           take: limit,
           orderBy: { createdDate: "desc" },
           include: {
-            category: {
-              select: {
-                id: true,
-                name: true,
-                imgUrl: true,
-              },
-            },
             _count: {
               select: {
                 products: true,
@@ -48,13 +36,33 @@ const restaurantController = {
                 orders: true,
               },
             },
+            // Check if current user liked this restaurant
+            ...(userId && {
+              restaurantFavourites: {
+                where: {
+                  userId: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+            }),
           },
         }),
         prisma.restaurant.count({ where }),
       ]);
 
+      // Transform data to add isLiked field
+      const restaurantsWithLikes = restaurants.map((restaurant) => {
+        const { restaurantFavourites, ...restaurantData } = restaurant;
+        return {
+          ...restaurantData,
+          isLiked: userId ? restaurantFavourites?.length > 0 : false,
+        };
+      });
+
       res.status(200).json({
-        data: restaurants,
+        data: restaurantsWithLikes,
         pagination: {
           page,
           limit,
@@ -63,7 +71,6 @@ const restaurantController = {
         },
         filters: {
           search: search || null,
-          categoryId: categoryId || null,
         },
       });
     } catch (error) {
@@ -75,28 +82,22 @@ const restaurantController = {
   getById: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req?.user?.userId || req?.user?.id;
 
       const restaurant = await prisma.restaurant.findUnique({
         where: { id },
         include: {
-          category: {
+          productCategories: {
             select: {
               id: true,
               name: true,
-              description: true,
               imgUrl: true,
-            },
-          },
-          productCategories: {
-            include: {
               _count: {
-                select: { products: true },
+                select: {
+                  products: true,
+                },
               },
             },
-          },
-          products: {
-            take: 10,
-            orderBy: { createdDate: "desc" },
           },
           _count: {
             select: {
@@ -105,6 +106,17 @@ const restaurantController = {
               restaurantFavourites: true,
             },
           },
+          // Check if current user liked this restaurant
+          ...(userId && {
+            restaurantFavourites: {
+              where: {
+                userId: userId,
+              },
+              select: {
+                id: true,
+              },
+            },
+          }),
         },
       });
 
@@ -112,77 +124,19 @@ const restaurantController = {
         return res.status(404).json({ error: "Restaurant not found" });
       }
 
-      res.json(restaurant);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  },
-
-  // Get by category with pagination and search
-  getByCategory: async (req, res) => {
-    try {
-      const { categoryId } = req.params;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const skip = (page - 1) * limit;
-      const search = req.query.search || "";
-
-      // Build where clause
-      const where = { categoryId };
-
-      // Add search if provided
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: "insensitive" } },
-          { city: { contains: search, mode: "insensitive" } },
-          { phoneNumber: { contains: search, mode: "insensitive" } },
-        ];
-      }
-
-      const [restaurants, total] = await Promise.all([
-        prisma.restaurant.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { createdDate: "desc" },
-          include: {
-            category: {
-              select: {
-                id: true,
-                name: true,
-                imgUrl: true,
-              },
-            },
-            _count: {
-              select: {
-                products: true,
-                orders: true,
-              },
-            },
-          },
-        }),
-        prisma.restaurant.count({ where }),
-      ]);
+      // Add isLiked field
+      const { restaurantFavourites, ...restaurantData } = restaurant;
 
       res.status(200).json({
-        data: restaurants,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-        filters: {
-          categoryId,
-          search: search || null,
-        },
+        ...restaurantData,
+        isLiked: userId ? restaurantFavourites?.length > 0 : false,
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
-  // Create (ADMIN only)
+  // Create (ADMIN && RESTAURANT_OWNER)
   create: async (req, res) => {
     try {
       const {
@@ -197,23 +151,13 @@ const restaurantController = {
         deliveryFee,
         minOrder,
         isActive,
-        categoryId,
       } = req.body;
 
       // Validate required fields
-      if (!name || !address || !city || !categoryId) {
+      if (!name || !address || !city) {
         return res.status(400).json({
-          error: "Name, address, city, and categoryId are required",
+          error: "Name, address, city are required",
         });
-      }
-
-      // Check if category exists
-      const category = await prisma.restaurantCategory.findUnique({
-        where: { id: categoryId },
-      });
-
-      if (!category) {
-        return res.status(404).json({ error: "Restaurant category not found" });
       }
 
       const restaurant = await prisma.restaurant.create({
@@ -229,16 +173,6 @@ const restaurantController = {
           deliveryFee,
           minOrder,
           isActive: isActive !== undefined ? isActive : true,
-          categoryId,
-        },
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              imgUrl: true,
-            },
-          },
         },
       });
 
@@ -248,7 +182,7 @@ const restaurantController = {
     }
   },
 
-  // Update (ADMIN only)
+  // Update (ADMIN && RESTAURANT_OWNER)
   update: async (req, res) => {
     try {
       const { id } = req.params;
@@ -264,21 +198,7 @@ const restaurantController = {
         deliveryFee,
         minOrder,
         isActive,
-        categoryId,
       } = req.body;
-
-      // If categoryId is being updated, check if it exists
-      if (categoryId) {
-        const category = await prisma.restaurantCategory.findUnique({
-          where: { id: categoryId },
-        });
-
-        if (!category) {
-          return res
-            .status(404)
-            .json({ error: "Restaurant category not found" });
-        }
-      }
 
       const restaurant = await prisma.restaurant.update({
         where: { id },
@@ -294,16 +214,6 @@ const restaurantController = {
           deliveryFee,
           minOrder,
           isActive,
-          categoryId,
-        },
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              imgUrl: true,
-            },
-          },
         },
       });
 
@@ -316,7 +226,7 @@ const restaurantController = {
     }
   },
 
-  // Delete (ADMIN only)
+  // Delete (ADMIN && RESTAURANT_OWNER)
   delete: async (req, res) => {
     try {
       const { id } = req.params;
@@ -337,7 +247,7 @@ const restaurantController = {
   // Toggle favourite (add or remove)
   toggleFavourite: async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req?.user?.userId || req?.user?.id;
       const { restaurantId } = req.body;
 
       if (!restaurantId) {
@@ -364,7 +274,7 @@ const restaurantController = {
       });
 
       if (existingFavourite) {
-        // Remove from favourites
+        // Remove from favourites (UNLIKE)
         await prisma.restaurantFavourite.delete({
           where: {
             id: existingFavourite.id,
@@ -373,33 +283,20 @@ const restaurantController = {
 
         return res.status(200).json({
           message: "Restaurant removed from favourites",
-          isFavourite: false,
+          isLiked: false,
         });
       } else {
-        // Add to favourites
-        const favourite = await prisma.restaurantFavourite.create({
+        // Add to favourites (LIKE)
+        await prisma.restaurantFavourite.create({
           data: {
             userId,
             restaurantId,
-          },
-          include: {
-            restaurant: {
-              select: {
-                id: true,
-                name: true,
-                imgUrl: true,
-                rating: true,
-                deliveryTime: true,
-                deliveryFee: true,
-              },
-            },
           },
         });
 
         return res.status(201).json({
           message: "Restaurant added to favourites",
-          isFavourite: true,
-          data: favourite,
+          isLiked: true,
         });
       }
     } catch (error) {
@@ -410,7 +307,7 @@ const restaurantController = {
   // Get user's favourite restaurants
   getMyFavourites: async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req?.user?.userId || req?.user?.id;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
@@ -424,13 +321,6 @@ const restaurantController = {
           include: {
             restaurant: {
               include: {
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                    imgUrl: true,
-                  },
-                },
                 _count: {
                   select: {
                     products: true,
@@ -443,8 +333,14 @@ const restaurantController = {
         prisma.restaurantFavourite.count({ where: { userId } }),
       ]);
 
+      // All restaurants in favourites are liked by definition
+      const data = favourites.map((fav) => ({
+        ...fav.restaurant,
+        isLiked: true,
+      }));
+
       res.status(200).json({
-        data: favourites,
+        data,
         pagination: {
           page,
           limit,
@@ -453,6 +349,7 @@ const restaurantController = {
         },
       });
     } catch (error) {
+      console.log(error);
       res.status(500).json({ error: error.message });
     }
   },

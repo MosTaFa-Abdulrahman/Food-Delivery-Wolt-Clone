@@ -1,7 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { axiosBaseQuery } from "../../requestMethod";
 
-export const userSlice = createApi({
+export const usersSlice = createApi({
   reducerPath: "usersApi",
   baseQuery: axiosBaseQuery({ baseUrl: "/users" }),
   tagTypes: ["User"],
@@ -76,4 +76,4 @@ export const {
   useGetUserByIdQuery,
   useGetUsersQuery,
   useUpdateUserMutation,
-} = userSlice;
+} = usersSlice;
