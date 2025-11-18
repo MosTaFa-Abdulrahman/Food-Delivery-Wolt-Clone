@@ -10,6 +10,7 @@ export interface CartItem {
   imgUrl?: string;
   restaurantId: string;
   restaurantName: string;
+  restaurantDeliveryFee?: number;
   // Add any other product fields you need
   description?: string;
   categoryId?: string;
@@ -18,6 +19,7 @@ interface CartState {
   items: CartItem[];
   restaurantId: string | null;
   restaurantName: string | null;
+  restaurantDeliveryFee: number | null;
 
   // Actions
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
@@ -41,6 +43,7 @@ export const useCartStore = create<CartState>()(
       items: [],
       restaurantId: null,
       restaurantName: null,
+      restaurantDeliveryFee: null,
 
       addItem: (item) => {
         const state = get();
@@ -57,6 +60,7 @@ export const useCartStore = create<CartState>()(
             ],
             restaurantId: item.restaurantId,
             restaurantName: item.restaurantName,
+            restaurantDeliveryFee: item.restaurantDeliveryFee,
           });
           return;
         }
@@ -79,6 +83,7 @@ export const useCartStore = create<CartState>()(
             items: [...state.items, { ...item, quantity: item.quantity || 1 }],
             restaurantId: item.restaurantId,
             restaurantName: item.restaurantName,
+            restaurantDeliveryFee: item.restaurantDeliveryFee,
           });
         }
       },
@@ -92,6 +97,8 @@ export const useCartStore = create<CartState>()(
           // Clear restaurant if cart is empty
           restaurantId: newItems.length === 0 ? null : state.restaurantId,
           restaurantName: newItems.length === 0 ? null : state.restaurantName,
+          restaurantDeliveryFee:
+            newItems.length === 0 ? null : state.restaurantDeliveryFee,
         });
       },
 
@@ -136,6 +143,7 @@ export const useCartStore = create<CartState>()(
           items: [],
           restaurantId: null,
           restaurantName: null,
+          restaurantDeliveryFee: null,
         });
       },
 
@@ -143,6 +151,7 @@ export const useCartStore = create<CartState>()(
         set({
           restaurantId: null,
           restaurantName: null,
+          restaurantDeliveryFee: null,
         });
       },
 

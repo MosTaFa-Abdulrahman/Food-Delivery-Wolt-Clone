@@ -26,6 +26,9 @@ import {
   useToggleProductLike,
 } from "@/store/products/productsSlice";
 
+// Zustand Cart Store
+import { useCartStore } from "@/store/useCartStore";
+
 import { COLORS, FONTS } from "@/constants/theme";
 import { Loader } from "@/components/global/Loader";
 
@@ -36,10 +39,13 @@ const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 export default function SingleRestaurant() {
   const { id } = useLocalSearchParams();
   const scrollY = useRef(new Animated.Value(0)).current;
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [cartItems, setCartItems] = useState<any[]>([]);
+
+  // Zustand Cart Store
+  const { items, addItem, getTotalItems, getTotalPrice } = useCartStore();
+  const totalItems = getTotalItems();
+  const totalPrice = getTotalPrice();
 
   // Fetch restaurant data
   const { data: restaurant, isLoading: restaurantLoading } = useRestaurant(
@@ -58,7 +64,7 @@ export default function SingleRestaurant() {
     categoryId: selectedCategory || undefined,
   });
 
-  // Toggle Product Like - FIXED
+  // Toggle Product Like
   const { mutate: toggleLike } = useToggleProductLike();
 
   // Flatten products from all pages
@@ -102,7 +108,7 @@ export default function SingleRestaurant() {
     extrapolate: "clamp",
   });
 
-  // Toggle like handler - FIXED
+  // Toggle like handler
   const handleToggleLike = (productId: string) => {
     toggleLike(
       { productId },
@@ -117,26 +123,19 @@ export default function SingleRestaurant() {
     );
   };
 
-  // Handle Cart
+  // Handle Add to Cart with Zustand
   const handleAddToCart = (product: any) => {
-    setCartItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { ...product, quantity: 1 }];
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      imgUrl: product.imgUrl,
+      restaurantId: id as string,
+      restaurantName: restaurant?.name || "",
+      description: product.description,
+      categoryId: product.categoryId,
     });
   };
-
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
 
   // Loading
   if (restaurantLoading) {
@@ -169,7 +168,7 @@ export default function SingleRestaurant() {
           />
         </Animated.View>
 
-        {/* Top Bar - Back & Search & Menu */}
+        {/* Top Bar - Back & Search */}
         <View style={styles.topBar}>
           <Pressable style={styles.iconButton} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color="#333" />

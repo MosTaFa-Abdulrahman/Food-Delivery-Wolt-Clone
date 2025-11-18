@@ -127,11 +127,9 @@ model Product {
 model Order {
   id               String      @id @default(uuid())
   orderNumber      String      @unique @map("order_number")
+  status           OrderStatus @default(PENDING)
   totalAmount      Float       @map("total_amount")
   deliveryFee      Float       @map("delivery_fee")
-  status           OrderStatus @default(PENDING)
-  deliveryAddress  String      @map("delivery_address")
-  phoneNumber      String      @map("phone_number")
   notes            String?
   createdDate      DateTime    @default(now()) @map("created_date")
   lastModifiedDate DateTime?   @updatedAt @map("last_modified_date")
@@ -171,9 +169,7 @@ model Location {
   label            String // e.g., "Home", "Work", "Other"
   address          String
   city             String
-  latitude         String?
-  longitude        String?
-  isDefault        Boolean   @default(false) @map("is_default")
+  phoneNumber             String
   createdDate      DateTime  @default(now()) @map("created_date")
   lastModifiedDate DateTime? @updatedAt @map("last_modified_date")
 

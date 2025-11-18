@@ -7,17 +7,17 @@ router.post("/", authenticate, orderController.createOrder);
 router.get("/my-orders", authenticate, orderController.getMyOrders);
 router.get("/:id", authenticate, orderController.getOrderById);
 
-// Admin routes
+// ADMIN & RESTAURANT_OWNER routes
 router.get(
   "/",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   orderController.getAllOrders
 );
 router.put(
   "/:id/status",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
   orderController.updateOrderStatus
 );
 

@@ -7,28 +7,26 @@ const orderController = {
       const userId = req.user.id;
       const {
         restaurantId,
-        phoneNumber,
         notes,
         items, // Array of { productId, quantity }
-        location, // { label, address, city, latitude, longitude, isDefault }
+        location, // { label, address, city, phoneNumber }
       } = req.body;
 
       // Validation
-      if (
-        !restaurantId ||
-        !phoneNumber ||
-        !items ||
-        items.length === 0 ||
-        !location
-      ) {
+      if (!restaurantId || !items || items.length === 0 || !location) {
         return res.status(400).json({
-          error: "restaurantId, phoneNumber, items, and location are required",
+          error: "restaurantId, items, and location are required",
         });
       }
 
-      if (!location.label || !location.address || !location.city) {
+      if (
+        !location.label ||
+        !location.address ||
+        !location.city ||
+        !location.phoneNumber
+      ) {
         return res.status(400).json({
-          error: "Location must have label, address, and city",
+          error: "Location must have label, address, city, and phoneNumber",
         });
       }
 
@@ -110,23 +108,13 @@ const orderController = {
           });
         }
 
-        // 5. Create location first
-        // If isDefault is true, unset other defaults
-        if (location.isDefault) {
-          await tx.location.updateMany({
-            where: { userId, isDefault: true },
-            data: { isDefault: false },
-          });
-        }
-
+        // 5. Create location
         const createdLocation = await tx.location.create({
           data: {
             label: location.label,
             address: location.address,
             city: location.city,
-            latitude: location.latitude || null,
-            longitude: location.longitude || null,
-            isDefault: location.isDefault || false,
+            phoneNumber: location.phoneNumber,
             userId,
           },
         });
@@ -143,8 +131,6 @@ const orderController = {
             totalAmount,
             deliveryFee: restaurant.deliveryFee || 0,
             status: "PENDING",
-            deliveryAddress: createdLocation.address,
-            phoneNumber,
             notes,
             userId,
             restaurantId,
@@ -180,7 +166,7 @@ const orderController = {
     }
   },
 
-  // Get all orders (ADMIN only)
+  // Get all orders (ADMIN & RESTAURANT_OWNER)
   getAllOrders: async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
@@ -330,7 +316,7 @@ const orderController = {
     }
   },
 
-  // Update order status (ADMIN only)
+  // Update order status (ADMIN & RESTAURANT_OWNER)
   updateOrderStatus: async (req, res) => {
     try {
       const { id } = req.params;
