@@ -23,7 +23,7 @@ router.get(
   productController.getByCategory
 );
 
-router.post("/toggle", authenticate, productController.toggleFavourite);
+router.post("/toggle-like", authenticate, productController.toggleFavourite);
 
 // This should come AFTER all specific routes
 router.get("/:id", optionalAuthenticate, productController.getById);

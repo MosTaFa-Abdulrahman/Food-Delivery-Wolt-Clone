@@ -634,8 +634,6 @@ const productController = {
       const userId = req.user.id;
       const { productId } = req.body;
 
-      console.log("🔄 Toggle Product Favourite:", { userId, productId });
-
       if (!productId) {
         return res.status(400).json({ error: "productId is required" });
       }
@@ -664,8 +662,6 @@ const productController = {
           },
         });
 
-        console.log("❌ Removed from favourites");
-
         return res.status(200).json({
           message: "Product removed from favourites",
           isLiked: false,
@@ -678,15 +674,12 @@ const productController = {
           },
         });
 
-        console.log("✅ Added to favourites");
-
         return res.status(201).json({
           message: "Product added to favourites",
           isLiked: true,
         });
       }
     } catch (error) {
-      console.error("❌ Toggle Favourite Error:", error);
       res.status(500).json({ error: error.message });
     }
   },

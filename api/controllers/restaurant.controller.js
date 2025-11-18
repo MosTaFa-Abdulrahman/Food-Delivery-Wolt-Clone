@@ -8,7 +8,7 @@ const restaurantController = {
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
       const search = req.query.search || "";
-      const userId = req.user?.id; // Current logged-in user (optional)
+      const userId = req.user?.id;
 
       // Build where clause for search and filter
       const where = {};
@@ -145,6 +145,8 @@ const restaurantController = {
         imgUrl,
         address,
         city,
+        latitude,
+        longitude,
         phoneNumber,
         rating,
         deliveryTime,
@@ -154,9 +156,9 @@ const restaurantController = {
       } = req.body;
 
       // Validate required fields
-      if (!name || !address || !city) {
+      if (!name || !address || !city || !latitude || !longitude) {
         return res.status(400).json({
-          error: "Name, address, city are required",
+          error: "Name, address, city, latitude, longitude are required",
         });
       }
 
@@ -167,6 +169,8 @@ const restaurantController = {
           imgUrl,
           address,
           city,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
           phoneNumber,
           rating: rating || 0,
           deliveryTime,
@@ -192,6 +196,8 @@ const restaurantController = {
         imgUrl,
         address,
         city,
+        latitude,
+        longitude,
         phoneNumber,
         rating,
         deliveryTime,
@@ -208,6 +214,8 @@ const restaurantController = {
           imgUrl,
           address,
           city,
+          latitude: latitude ? parseFloat(latitude) : undefined,
+          longitude: longitude ? parseFloat(longitude) : undefined,
           phoneNumber,
           rating,
           deliveryTime,

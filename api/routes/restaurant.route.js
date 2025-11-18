@@ -7,7 +7,7 @@ const {
 const restaurantController = require("../controllers/restaurant.controller");
 
 // Public routes
-router.get("/", restaurantController.getAll);
+router.get("/", optionalAuthenticate, restaurantController.getAll);
 
 // ⚠️ IMPORTANT: Put specific routes BEFORE parameterized routes
 router.get(

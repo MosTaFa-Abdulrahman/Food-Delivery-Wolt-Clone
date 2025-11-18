@@ -39,7 +39,7 @@ model User {
   firstName        String?   @map("first_name")
   lastName         String?   @map("last_name")
   imgUrl           String?   @map("img_url")
-  city             String?
+  city             String? 
   phoneNumber      String?   @map("phone_number")
   role             UserRole  @default(USER)
   createdDate      DateTime  @default(now()) @map("created_date")
@@ -81,6 +81,8 @@ model Restaurant {
   imgUrl           String?   @map("img_url")
   address          String
   city             String
+  latitude         Float?    
+  longitude        Float?  
   phoneNumber      String?   @map("phone_number")
   rating           Float?    @default(0)
   deliveryTime     String?   @map("delivery_time")
