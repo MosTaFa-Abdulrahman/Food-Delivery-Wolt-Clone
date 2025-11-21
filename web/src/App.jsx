@@ -22,6 +22,9 @@ import SingleRestaurant from "./pages/single-restaurant/SingleRestaurant";
 import Favourites from "./pages/favourites/Favourites";
 import Restaurants from "./pages/restaurants/Restaurants";
 import Products from "./pages/products/Products";
+import Orders from "./pages/orders/Orders";
+import Users from "./pages/users/Users";
+import SingleUser from "./pages/single-user/SingleUser";
 
 // Dashboard layout
 const DashboardLayout = () => {
@@ -97,6 +100,18 @@ function App() {
         {
           path: "/admin/products",
           element: <AdminManagerRoute element={<Products />} />,
+        },
+        {
+          path: "/admin/orders",
+          element: <AdminManagerRoute element={<Orders />} />,
+        },
+        {
+          path: "/admin/users",
+          element: <AdminManagerRoute element={<Users />} />,
+        },
+        {
+          path: "/admin/users/:userId",
+          element: <AdminManagerRoute element={<SingleUser />} />,
         },
       ],
     },

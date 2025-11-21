@@ -370,6 +370,85 @@ const orderController = {
       res.status(500).json({ error: error.message });
     }
   },
+
+  // Delete order (USER only if status is PENDING)
+  deleteOrder: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      // Use transaction to ensure data consistency
+      await prisma.$transaction(async (tx) => {
+        // 1. Find the order with its items
+        const order = await tx.order.findUnique({
+          where: { id },
+          include: {
+            orderItems: true,
+          },
+        });
+
+        if (!order) {
+          throw new Error("Order not found");
+        }
+
+        // 2. Check if user owns this order
+        if (order.userId !== userId) {
+          throw new Error("Access denied. You can only delete your own orders");
+        }
+
+        // 3. Check if order status is PENDING
+        if (order.status !== "PENDING") {
+          throw new Error(
+            `Cannot delete order with status "${order.status}". Only PENDING orders can be deleted`
+          );
+        }
+
+        // 4. Restore product quantities
+        for (const item of order.orderItems) {
+          // Only restore quantity if productId exists (product not deleted)
+          if (item.productId) {
+            const product = await tx.product.findUnique({
+              where: { id: item.productId },
+            });
+
+            if (product) {
+              const newQuantity = product.quantity + item.quantity;
+
+              await tx.product.update({
+                where: { id: item.productId },
+                data: {
+                  quantity: newQuantity,
+                  // If product was unavailable due to stock, make it available again
+                  isAvailable: true,
+                },
+              });
+            }
+          }
+        }
+
+        // 5. Delete the order (orderItems will be deleted automatically due to cascade)
+        await tx.order.delete({
+          where: { id },
+        });
+      });
+
+      res.status(200).json({
+        message: "Order deleted successfully and product quantities restored",
+      });
+    } catch (error) {
+      // Handle specific error messages
+      if (error.message === "Order not found") {
+        return res.status(404).json({ error: error.message });
+      }
+      if (
+        error.message.includes("Access denied") ||
+        error.message.includes("Cannot delete")
+      ) {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  },
 };
 
 module.exports = orderController;

@@ -15,6 +15,75 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
+  // =====================================================
+  // Search Input Styles
+  // =====================================================
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingLeft: 16,
+    paddingVertical: 4,
+    paddingRight: 4,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.dark,
+    paddingVertical: 12,
+  },
+  clearButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  searchButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 4,
+  },
+  activeSearchBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.primaryLight,
+    marginHorizontal: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  activeSearchText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: "600",
+    flex: 1,
+  },
+  resultsCount: {
+    fontSize: 14,
+    color: COLORS.muted,
+    fontWeight: "500",
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+
+  // =====================================================
+  // Restaurant Card Styles
+  // =====================================================
   card: {
     marginHorizontal: 16,
     marginVertical: 8,

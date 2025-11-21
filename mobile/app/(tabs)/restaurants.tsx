@@ -1,9 +1,10 @@
 import { styles } from "@/styles/restaurnats/restaurant.style";
-import { useState } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,15 +27,19 @@ import Restaurant from "@/components/restaurnats/Restaurant";
 import { useInfiniteRestaurants } from "@/store/restaurants/restaurantsSlice";
 
 // Not-Found
-const NoRestaurantsFound = () => {
+const NoRestaurantsFound = ({ searchQuery }: { searchQuery?: string }) => {
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIconContainer}>
         <Ionicons name="restaurant-outline" size={50} color={COLORS.primary} />
       </View>
-      <Text style={styles.emptyStateText}>No Restaurants Found</Text>
+      <Text style={styles.emptyStateText}>
+        {searchQuery ? "No Results Found" : "No Restaurants Found"}
+      </Text>
       <Text style={styles.emptyStateSubtext}>
-        There are no restaurants available at the moment. Check back later!
+        {searchQuery
+          ? `We couldn't find any restaurants matching "${searchQuery}". Try a different search.`
+          : "There are no restaurants available at the moment. Check back later!"}
       </Text>
     </View>
   );
@@ -49,7 +54,7 @@ const ErrorState = ({ onRetry }: { onRetry: () => void }) => {
       </View>
       <Text style={styles.errorStateText}>Oops! Something went wrong</Text>
       <Text style={styles.errorStateSubtext}>
-        We couldn't load the restaurants. Please check your connection and try
+        We could not load the restaurants. Please check your connection and try
         again.
       </Text>
       <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
@@ -58,6 +63,84 @@ const ErrorState = ({ onRetry }: { onRetry: () => void }) => {
     </View>
   );
 };
+
+// Search Header Component - Memoized to prevent re-renders
+const SearchHeader = React.memo(
+  ({
+    searchInput,
+    setSearchInput,
+    handleSubmitEditing,
+    handleClearSearch,
+    handleSearch,
+    activeSearch,
+    resultsCount,
+  }: {
+    searchInput: string;
+    setSearchInput: (text: string) => void;
+    handleSubmitEditing: () => void;
+    handleClearSearch: () => void;
+    handleSearch: () => void;
+    activeSearch: string;
+    resultsCount: number;
+  }) => (
+    <>
+      <Text style={styles.pageTitle}>Restaurants</Text>
+
+      {/* Search Input */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search restaurants..."
+          placeholderTextColor={COLORS.muted}
+          value={searchInput}
+          onChangeText={setSearchInput}
+          returnKeyType="search"
+          onSubmitEditing={handleSubmitEditing}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+
+        {searchInput.length > 0 && (
+          <TouchableOpacity
+            onPress={handleClearSearch}
+            style={styles.clearButton}
+          >
+            <Ionicons name="close-circle" size={20} color={COLORS.muted} />
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          onPress={handleSearch}
+          style={styles.searchButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Active Search Badge */}
+      {activeSearch && (
+        <View style={styles.activeSearchBadge}>
+          <Text style={styles.activeSearchText}>
+            Searching for: {activeSearch}
+          </Text>
+          <TouchableOpacity onPress={handleClearSearch}>
+            <Ionicons name="close" size={18} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Results count */}
+      {activeSearch && resultsCount > 0 && (
+        <Text style={styles.resultsCount}>
+          Found {resultsCount} restaurant{resultsCount !== 1 ? "s" : ""}
+        </Text>
+      )}
+    </>
+  )
+);
+
+SearchHeader.displayName = "SearchHeader";
 
 export default function Restaurants() {
   const insets = useSafeAreaInsets();
@@ -72,8 +155,10 @@ export default function Restaurants() {
 
   // State
   const [refreshing, setRefreshing] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
 
-  // React-Query
+  // React-Query with active search query
   const {
     data,
     isLoading,
@@ -82,7 +167,9 @@ export default function Restaurants() {
     hasNextPage,
     isFetchingNextPage,
     refetch,
-  } = useInfiniteRestaurants();
+  } = useInfiniteRestaurants({
+    search: activeSearch || undefined,
+  });
 
   // Handle On Refresh
   const onRefresh = async () => {
@@ -98,12 +185,27 @@ export default function Restaurants() {
     }
   };
 
-  // All Restaurnats
+  // Handle Search Button Click
+  const handleSearch = useCallback(() => {
+    setActiveSearch(searchInput.trim());
+  }, [searchInput]);
+
+  // Handle Clear Search
+  const handleClearSearch = useCallback(() => {
+    setSearchInput("");
+    setActiveSearch("");
+  }, []);
+
+  // Handle Submit on keyboard
+  const handleSubmitEditing = useCallback(() => {
+    handleSearch();
+  }, [handleSearch]);
+
+  // All Restaurants
   const restaurants = data?.pages.flatMap((page) => page.content) ?? [];
 
   if (isLoading) return <Loader text="Loading Restaurants..." />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
-  if (restaurants.length === 0) return <NoRestaurantsFound />;
 
   // Footer
   const renderFooter = () => {
@@ -116,9 +218,27 @@ export default function Restaurants() {
     );
   };
 
-  // Header component for FlatList
-  const ListHeaderComponent = () => (
-    <Text style={styles.pageTitle}>Restaurants</Text>
+  // Header component for FlatList - useMemo to prevent re-renders
+  const ListHeaderComponent = useMemo(
+    () => (
+      <SearchHeader
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+        handleSubmitEditing={handleSubmitEditing}
+        handleClearSearch={handleClearSearch}
+        handleSearch={handleSearch}
+        activeSearch={activeSearch}
+        resultsCount={data?.pages[0]?.totalElements || 0}
+      />
+    ),
+    [
+      searchInput,
+      activeSearch,
+      data?.pages,
+      handleSubmitEditing,
+      handleClearSearch,
+      handleSearch,
+    ]
   );
 
   return (
@@ -134,6 +254,7 @@ export default function Restaurants() {
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={ListHeaderComponent}
         ListFooterComponent={renderFooter}
+        ListEmptyComponent={<NoRestaurantsFound searchQuery={activeSearch} />}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}

@@ -20,19 +20,46 @@ export default function ProductCard({
   const { getItemQuantity } = useCartStore();
   const quantityInCart = getItemQuantity(product.id);
 
+  // Check availability and stock
+  const isOutOfStock = product.quantity <= 0;
+  const isUnavailable = !product.isAvailable;
+  const isDisabled = isOutOfStock || isUnavailable;
+  const stockReached = quantityInCart >= product.quantity;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDisabled && styles.containerDisabled]}>
       <View style={styles.content}>
         {/* Product Image */}
-        <Image
-          source={{ uri: product.imgUrl || "https://via.placeholder.com/100" }}
-          style={styles.image}
-          contentFit="cover"
-        />
+        <View style={styles.imageContainer}>
+          <Image
+            source={{
+              uri: product.imgUrl || "https://via.placeholder.com/100",
+            }}
+            style={[styles.image, isDisabled && styles.imageDisabled]}
+            contentFit="cover"
+          />
+
+          {/* Out of Stock Badge */}
+          {isOutOfStock && (
+            <View style={styles.stockBadge}>
+              <Text style={styles.stockBadgeText}>Out of Stock</Text>
+            </View>
+          )}
+
+          {/* Unavailable Badge */}
+          {!isOutOfStock && isUnavailable && (
+            <View style={styles.unavailableBadge}>
+              <Text style={styles.unavailableBadgeText}>Unavailable</Text>
+            </View>
+          )}
+        </View>
 
         {/* Product Info */}
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={2}>
+          <Text
+            style={[styles.name, isDisabled && styles.nameDisabled]}
+            numberOfLines={2}
+          >
             {product.name}
           </Text>
 
@@ -42,9 +69,18 @@ export default function ProductCard({
             </Text>
           )}
 
+          {/* Stock Info - Show only when available */}
+          {!isDisabled && product.quantity <= 10 && (
+            <Text style={styles.stockWarning}>
+              Only {product.quantity} left in stock!
+            </Text>
+          )}
+
           <View style={styles.footer}>
             <View style={styles.priceContainer}>
-              <Text style={styles.price}>€{product.price.toFixed(2)}</Text>
+              <Text style={[styles.price, isDisabled && styles.priceDisabled]}>
+                €{product.price.toFixed(2)}
+              </Text>
               {quantityInCart > 0 && (
                 <View style={styles.cartBadge}>
                   <Text style={styles.cartBadgeText}>{quantityInCart}</Text>
@@ -54,7 +90,7 @@ export default function ProductCard({
 
             {/* Action Buttons */}
             <View style={styles.actions}>
-              {/* Like Button */}
+              {/* Like Button - Always enabled */}
               <Pressable
                 style={styles.likeButton}
                 onPress={() => onToggleLike(product.id)}
@@ -66,20 +102,32 @@ export default function ProductCard({
                 />
               </Pressable>
 
-              {/* Add to Cart Button */}
-              <Pressable
-                style={[
-                  styles.addButton,
-                  quantityInCart > 0 && styles.addButtonActive,
-                ]}
-                onPress={() => onAddToCart(product)}
-              >
-                <Ionicons
-                  name={quantityInCart > 0 ? "checkmark" : "add"}
-                  size={20}
-                  color="#fff"
-                />
-              </Pressable>
+              {/* Add to Cart Button - Disabled when out of stock or unavailable or stock reached */}
+              {!isDisabled && !stockReached ? (
+                <Pressable
+                  style={[
+                    styles.addButton,
+                    quantityInCart > 0 && styles.addButtonActive,
+                  ]}
+                  onPress={() => onAddToCart(product)}
+                >
+                  <Ionicons
+                    name={quantityInCart > 0 ? "checkmark" : "add"}
+                    size={20}
+                    color="#fff"
+                  />
+                </Pressable>
+              ) : !isDisabled && stockReached ? (
+                // Show "Max" badge when stock limit reached
+                <View style={styles.maxBadge}>
+                  <Text style={styles.maxBadgeText}>Max</Text>
+                </View>
+              ) : (
+                // Show disabled button for out of stock/unavailable
+                <View style={styles.addButtonDisabled}>
+                  <Ionicons name="close" size={20} color="#999" />
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -103,15 +151,52 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  containerDisabled: {
+    opacity: 0.6,
+  },
   content: {
     flexDirection: "row",
     padding: 12,
+  },
+  imageContainer: {
+    position: "relative",
   },
   image: {
     width: 100,
     height: 100,
     borderRadius: 8,
     backgroundColor: "#F5F5F5",
+  },
+  imageDisabled: {
+    opacity: 0.5,
+  },
+  stockBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  stockBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.brandBold,
+    color: "#fff",
+  },
+  unavailableBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#FF9800",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  unavailableBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.brandBold,
+    color: "#fff",
   },
   info: {
     flex: 1,
@@ -124,12 +209,21 @@ const styles = StyleSheet.create({
     color: COLORS.dark,
     marginBottom: 4,
   },
+  nameDisabled: {
+    color: "#999",
+  },
   description: {
     fontSize: 13,
     fontFamily: FONTS.brand,
     color: "#999",
     lineHeight: 18,
     marginBottom: 8,
+  },
+  stockWarning: {
+    fontSize: 11,
+    fontFamily: FONTS.brand,
+    color: "#FF9800",
+    marginBottom: 4,
   },
   footer: {
     flexDirection: "row",
@@ -145,6 +239,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: FONTS.brandBold,
     color: COLORS.primary,
+  },
+  priceDisabled: {
+    color: "#999",
   },
   cartBadge: {
     backgroundColor: COLORS.primary,
@@ -182,5 +279,27 @@ const styles = StyleSheet.create({
   },
   addButtonActive: {
     backgroundColor: "#4CAF50",
+  },
+  addButtonDisabled: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F5F5F5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  maxBadge: {
+    backgroundColor: "#FF9800",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 18,
+    minWidth: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  maxBadgeText: {
+    fontSize: 11,
+    fontFamily: FONTS.brandBold,
+    color: "#fff",
   },
 });

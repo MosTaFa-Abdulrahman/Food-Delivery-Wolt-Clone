@@ -6,6 +6,7 @@ const orderController = require("../controllers/order.controller");
 router.post("/", authenticate, orderController.createOrder);
 router.get("/my-orders", authenticate, orderController.getMyOrders);
 router.get("/:id", authenticate, orderController.getOrderById);
+router.delete("/:id", authenticate, orderController.deleteOrder);
 
 // ADMIN & RESTAURANT_OWNER routes
 router.get(

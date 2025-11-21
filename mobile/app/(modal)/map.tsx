@@ -19,7 +19,7 @@ import * as Location from "expo-location";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
 // React-Query
-import { useAllRestaurants } from "@/store/restaurants/restaurantsSlice";
+import { useAllForMap } from "@/store/restaurants/restaurantsSlice";
 
 export default function Map() {
   const router = useRouter();
@@ -35,11 +35,8 @@ export default function Map() {
   >(null);
 
   // Fetch all restaurants from API
-  const { data: restaurantsData, isLoading: restaurantsLoading } =
-    useAllRestaurants();
-
-  // Your hook transforms 'data' to 'content'
-  const restaurants = restaurantsData?.content || [];
+  const { data, isLoading: restaurantsLoading } = useAllForMap();
+  const restaurants = data?.data ?? []; // Typed as Restaurant[]
 
   const locateMe = async () => {
     try {

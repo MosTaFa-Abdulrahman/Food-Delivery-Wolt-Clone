@@ -5,10 +5,15 @@ const {
   updateUser,
   deleteUser,
 } = require("../controllers/user.controller");
-const { authenticate } = require("../middlewares/auth.middleware");
+const { authenticate, authorize } = require("../middlewares/auth.middleware");
 
-// User Profile Operations
-router.get("/", authenticate, getAllUsers);
+// User
+router.get(
+  "/",
+  authenticate,
+  authorize(["ADMIN", "RESTAURANT_OWNER"]),
+  getAllUsers
+);
 router.get("/:userId", authenticate, getUserProfile);
 router.patch("/me", authenticate, updateUser);
 router.delete("/me", authenticate, deleteUser);

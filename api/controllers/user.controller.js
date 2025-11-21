@@ -34,7 +34,6 @@ const getAllUsers = async (req, res) => {
           firstName: true,
           lastName: true,
           imgUrl: true,
-          coverImgUrl: true,
           city: true,
           role: true,
           phoneNumber: true,
@@ -67,7 +66,7 @@ const getUserProfile = async (req, res) => {
     const { userId } = req.params;
 
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(userId) },
+      where: { id: userId },
       select: {
         id: true,
         username: true,
@@ -75,7 +74,6 @@ const getUserProfile = async (req, res) => {
         firstName: true,
         lastName: true,
         imgUrl: true,
-        coverImgUrl: true,
         city: true,
         role: true,
         phoneNumber: true,
@@ -102,13 +100,14 @@ const getUserProfile = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const { firstName, lastName, imgUrl, city } = req.body;
+    const { firstName, lastName, imgUrl, city, phoneNumber } = req.body;
 
     const updateData = {
       ...(firstName !== undefined && { firstName }),
       ...(lastName !== undefined && { lastName }),
       ...(imgUrl !== undefined && { imgUrl }),
       ...(city !== undefined && { city }),
+      ...(phoneNumber !== undefined && { phoneNumber }),
     };
 
     const user = await prisma.user.update({

@@ -129,9 +129,12 @@ export default function SingleRestaurant() {
       id: product.id,
       name: product.name,
       price: product.price,
+      stock: product.quantity,
       imgUrl: product.imgUrl,
       restaurantId: id as string,
       restaurantName: restaurant?.name || "",
+      restaurantDeliveryTime: restaurant?.deliveryTime || "",
+      restaurantDeliveryFee: restaurant?.deliveryFee || 0,
       description: product.description,
       categoryId: product.categoryId,
     });

@@ -20,7 +20,7 @@ interface BaseQueryResult<T = any> {
   error?: BaseQueryError;
 }
 
-const BASE_URL = "http://192.168.1.3:8080/api/";
+const BASE_URL = "http://192.168.43.214:8080/api/";
 
 export const makeRequest = axios.create({
   baseURL: BASE_URL,

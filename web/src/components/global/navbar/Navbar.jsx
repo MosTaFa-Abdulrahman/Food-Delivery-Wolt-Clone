@@ -121,9 +121,7 @@ function Navbar() {
               {isProfileDropdownOpen && (
                 <S.ProfileDropdown>
                   <S.DropdownItem
-                    onClick={() =>
-                      toast("Profile coming soon!", { icon: "👤" })
-                    }
+                    onClick={() => navigate(`/admin/users/${currentUser.id}`)}
                   >
                     <User size={18} />
                     My Profile

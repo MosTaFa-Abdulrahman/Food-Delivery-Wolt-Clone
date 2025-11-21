@@ -17,8 +17,13 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import upload from "../../uplaod";
 
+// Components
+import OrderHistoryModal from "@/components/profile/OrderHistoryModal";
+
 // Context && React-Query
 import { AuthContext } from "@/context/AuthContext";
+import { useUpdateUser } from "@/store/users/usersSlice";
+import { useInfiniteMyOrders } from "@/store/orders/ordersSlice";
 import {
   useInfiniteMyFavouriteRestaurants,
   useToggleRestaurantFavourite,
@@ -27,18 +32,22 @@ import {
   useInfiniteMyLikedProducts,
   useToggleProductLike,
 } from "@/store/products/productsSlice";
-import { useUpdateUser } from "@/store/users/usersSlice";
 
 type FavoriteTab = "restaurants" | "products";
 
 export default function Profile() {
-  const { currentUser, logout } = useContext(AuthContext);
+  const { currentUser, logout, refreshUser } = useContext(AuthContext);
   const router = useRouter();
 
   // States
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<FavoriteTab>("restaurants");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
+
+  // Get orders count for display
+  const { data: ordersData } = useInfiniteMyOrders();
+  const totalOrders = ordersData?.pages[0]?.pagination?.total || 0;
 
   // Edit Form State
   const [editForm, setEditForm] = useState({
@@ -48,6 +57,19 @@ export default function Profile() {
     city: currentUser?.city || "",
     phoneNumber: currentUser?.phoneNumber || "",
   });
+
+  // Update form when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setEditForm({
+        firstName: currentUser.firstName || "",
+        lastName: currentUser.lastName || "",
+        imgUrl: currentUser.imgUrl || "",
+        city: currentUser.city || "",
+        phoneNumber: currentUser.phoneNumber || "",
+      });
+    }
+  }, [currentUser]);
 
   // Fetch Favorites
   const {
@@ -147,10 +169,13 @@ export default function Profile() {
         lastName: editForm.lastName,
         imgUrl: editForm.imgUrl,
         city: editForm.city,
-        phoneNumber: JSON.stringify(editForm.phoneNumber),
+        phoneNumber: editForm.phoneNumber,
       },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+          // ✅ REFRESH USER IN AUTH CONTEXT
+          await refreshUser();
+
           setEditModalVisible(false);
           Alert.alert("Success", "Profile updated successfully");
         },
@@ -276,12 +301,21 @@ export default function Profile() {
 
         {/* Account Section */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowOrderHistory(true)}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name="receipt-outline" size={24} color={COLORS.dark} />
               <View style={styles.menuItemText}>
                 <Text style={styles.menuItemTitle}>Order history</Text>
-                <Text style={styles.menuItemSubtitle}>No orders</Text>
+                <Text style={styles.menuItemSubtitle}>
+                  {totalOrders === 0
+                    ? "No orders"
+                    : `${totalOrders} ${
+                        totalOrders === 1 ? "order" : "orders"
+                      }`}
+                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -630,6 +664,12 @@ export default function Profile() {
           </View>
         </View>
       </Modal>
+
+      {/* Order History Modal */}
+      <OrderHistoryModal
+        visible={showOrderHistory}
+        onClose={() => setShowOrderHistory(false)}
+      />
     </View>
   );
 }

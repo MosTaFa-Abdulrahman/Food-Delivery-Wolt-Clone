@@ -17,13 +17,21 @@ import {
   UpdateRestaurantRequest,
   UpdateRestaurantResponse,
   DeleteRestaurantResponse,
-  ToggleRestaurantFavouriteRequest,
   ToggleRestaurantFavouriteResponse,
   GetAllRestaurantsParams,
   GetMyFavouriteRestaurantsParams,
+  GetAllForMapResponse,
 } from "../../types/restaurants.types";
 
 // *********************************** ((API Functions)) **************************************** //
+
+// Get All Restaurants (NO search, NO pagination)
+const fetchAllForMap = async (): Promise<GetAllForMapResponse> => {
+  const response = await makeRequest.get<GetAllForMapResponse>(
+    "/restaurants/get/all"
+  );
+  return response.data;
+};
 
 // Create Restaurant
 const createRestaurant = async (
@@ -127,6 +135,14 @@ const toggleRestaurantFavourite = async (
 };
 
 // *********************************** ((React-Query Hooks)) **************************************** //
+
+// Get All Restaurants (simple)
+export const useAllForMap = () => {
+  return useQuery({
+    queryKey: ["restaurants"],
+    queryFn: () => fetchAllForMap(),
+  });
+};
 
 // Create Restaurant
 export const useCreateRestaurant = () => {

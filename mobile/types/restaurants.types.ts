@@ -1,3 +1,26 @@
+export interface RestaurantMap {
+  id: string;
+  name: string;
+  description: string | null;
+  imgUrl: string | null;
+  address: string;
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
+  phoneNumber: string | null;
+  rating: number;
+  deliveryTime: string | null;
+  deliveryFee: number | null;
+  minOrder: number | null;
+  isActive: boolean;
+  createdDate: string;
+  lastModifiedDate: string | null;
+}
+export interface GetAllForMapResponse {
+  success: boolean;
+  data: Restaurant[];
+}
+
 export interface Restaurant {
   id: string;
   name: string;

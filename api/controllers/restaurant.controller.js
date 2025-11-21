@@ -78,6 +78,22 @@ const restaurantController = {
     }
   },
 
+  getAllFromMap: async (req, res) => {
+    try {
+      const restaurants = await prisma.restaurant.findMany({
+        orderBy: { createdDate: "desc" }, // optional
+      });
+
+      res.status(200).json({
+        success: true,
+        data: restaurants,
+      });
+    } catch (error) {
+      console.error("Get All Restaurants Error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
   // Get by ID
   getById: async (req, res) => {
     try {

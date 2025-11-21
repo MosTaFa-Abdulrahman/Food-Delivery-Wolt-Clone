@@ -78,6 +78,12 @@ const updateOrderStatus = async ({
   return response.data;
 };
 
+// Delete Order (User - PENDING only)
+const deleteOrder = async (orderId: string): Promise<{ message: string }> => {
+  const response = await makeRequest.delete(`/orders/${orderId}`);
+  return response.data;
+};
+
 // *********************************** ((React-Query Hooks)) **************************************** //
 
 // Create Order
@@ -110,7 +116,7 @@ export const useInfiniteMyOrders = (
     queryFn: ({ pageParam = 1 }) =>
       fetchMyOrders({ ...params, page: pageParam as number }),
     getNextPageParam: (lastPage) => {
-      const { page, totalPages } = lastPage;
+      const { page, totalPages } = lastPage.pagination;
       return page < totalPages ? page + 1 : undefined;
     },
     initialPageParam: 1,
@@ -134,7 +140,7 @@ export const useInfiniteAllOrders = (
     queryFn: ({ pageParam = 1 }) =>
       fetchAllOrders({ ...params, page: pageParam as number }),
     getNextPageParam: (lastPage) => {
-      const { page, totalPages } = lastPage;
+      const { page, totalPages } = lastPage.pagination;
       return page < totalPages ? page + 1 : undefined;
     },
     initialPageParam: 1,
@@ -162,6 +168,20 @@ export const useUpdateOrderStatus = () => {
     mutationFn: updateOrderStatus,
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+    },
+  });
+};
+
+// Delete Order (User - PENDING only)
+export const useDeleteOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteOrder,
+    onSuccess: () => {
+      // Invalidate all order-related queries
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["my-orders"] });
     },
