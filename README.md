@@ -4,7 +4,7 @@ A production-ready **food delivery platform** inspired by Wolt, built with:
 
 - **Express.js** + **Prisma ORM** + **PostgreSQL**
 - **React.js** + **RTK Query** + **Styled-Components**
-- **React-Native (Expo)** mobile app
+- **React-Native (Expo)** mobile app + **React-Query**
 
 Supports **restaurants**, **products**, **categories**, **favorites**, **orders**, **authentication**, and an **admin panel**.
 
