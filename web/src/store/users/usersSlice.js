@@ -14,10 +14,6 @@ export const usersSlice = createApi({
         method: "GET",
       }),
       transformResponse: (response) => {
-        console.log("Raw API Response:", response);
-
-        // Handle different response structures
-        // If response is already the data object
         if (response?.content) {
           return {
             data: response,

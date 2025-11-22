@@ -148,7 +148,7 @@ export const productsSlice = createApi({
     // Toggle favourite
     toggleFavourite: builder.mutation({
       query: (productId) => ({
-        url: "/toggle",
+        url: "/toggle-like",
         method: "POST",
         data: { productId },
       }),
